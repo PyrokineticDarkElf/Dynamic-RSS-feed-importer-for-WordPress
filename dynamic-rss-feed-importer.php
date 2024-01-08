@@ -73,7 +73,6 @@ $js_config = array(
     ),
 );
 
-
 // Unified modification function
 function modifyFieldValues($input_data) {
     foreach ($input_data as $field => $value) {
@@ -148,8 +147,8 @@ function import_rss_episodes() {
 // Function to process feed
 function process_feed($feed) {
     global $js_config;
-
-    foreach ($feed->channel->item as $item) {
+	
+    foreach ($feed->channel->item as $item) {		
         $input_data = array();
 
         // Process input fields
@@ -193,6 +192,7 @@ function process_feed($feed) {
         //echo 'Existing Post' . var_dump($existing_post) . '<br>';
     }
 }
+
 
 
 // Function to update or insert posts
@@ -269,28 +269,72 @@ function process_image_upload($post_id, $input_data) {
 
     // Save the image to the media library
     if ($input_data['featured_image']) {
-        if (get_post_thumbnail_id($post_id) == '') {
+        echo "Starting image import check</br>";
+
+        // Extract filename from the URL
+        $filename = basename($input_data['featured_image']);
+
+        // Extract the title from the filename (without extension)
+        $title = pathinfo($filename, PATHINFO_FILENAME);
+
+        // Check if an attachment with the same title exists
+        $existing_image_id = attachment_exists_by_title($title);
+		echo "Existing Image ID: " . $existing_image_id;
+		
+        if ($existing_image_id) {
+            // Image already exists, update the featured image link
+            update_post_meta($post_id, '_thumbnail_id', $existing_image_id);
+            echo "Image already exists. Updated featured image link.</br>";
+        } else {
+            echo "Starting image import</br>";
+
+            // Ensure that the file name is URL-encoded
+            $encoded_filename = urlencode($filename);
+
             $file = array();
-            $file['name'] = basename($image);
-            $file['tmp_name'] = download_url($image);
+            $file['name'] = $encoded_filename;
+            $file['tmp_name'] = download_url($input_data['featured_image']);
 
             if (is_wp_error($file['tmp_name'])) {
                 echo 'Error: Problem downloading image: ' . $file['tmp_name']->get_error_message() . "</br>";
                 return; // Stop processing if there's an error
             }
+
             $image_id = media_handle_sideload($file, $post_id);
             if (is_wp_error($image_id)) {
                 echo 'Error: Problem sideloading image: ' . $image_id->get_error_message() . "</br>";
                 return; // Stop processing if there's an error
             }
+
             // Set the image as the featured image for the post
             $result = set_post_thumbnail($post_id, $image_id);
             if ($result === false) {
                 echo "Error: Problem setting featured image: " . $result . "</br>";
-            }            
+            }
         }
     }
 }
+
+
+// Custom function to check if an attachment with a given title exists
+function attachment_exists_by_title($title) {
+    $args = array(
+        'post_type' => 'attachment',
+        'post_status' => 'inherit',
+        'posts_per_page' => 1,
+        'title' => $title,
+    );
+
+    $attachments = get_posts($args);
+
+    // Return the attachment ID if an attachment is found, or 0 if none
+    return !empty($attachments) ? $attachments[0]->ID : 0;
+}
+
+
+
+
+
 
 
 // Add a custom menu item to the admin menu
