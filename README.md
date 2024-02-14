@@ -1,5 +1,5 @@
 # Dynamic-RSS-feed-importer-for-WordPress
-Work in progress.
+Work in progress. Use at your own risk!
 
 This PHP script is designed to import RSS feed items into WordPress as posts. It includes functionality to modify field values, update or insert posts, handle custom fields (Advanced Custom Fields - ACF), process tags, and upload images to the media library.
 
